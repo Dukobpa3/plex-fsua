@@ -141,18 +141,42 @@ def ItemsMenu(url):
                 year=year,
                 poster=picture
             ))
-        return parsed_items
 
-    items = ParseItems(url)
-    items_menu = ObjectContainer(
-        objects=[
-            DirectoryObject(
-                key=Callback(Stub),
-                title=item.title,
-                summary="&#xa;".join(filter(None, [item.original_title, item.year])),
-                thumb=Resource.ContentsOfURLWithFallback(item.poster)
-            ) for item in items
-        ]
-    )
+        # previous_link = items_page.cssselect('.previous-link')
+        prev_page = None  # previous_link and (BASE_SITE_URL + previous_link[0].xpath("string(@href)"))
+
+        next_link = items_page.cssselect('.next-link')
+        next_page = next_link and (BASE_SITE_URL + next_link[0].xpath("string(@href)"))
+
+        return parsed_items, prev_page, next_page
+
+    items, prev_page, next_page = ParseItems(url)
+    items_menu_objects = [
+        DirectoryObject(
+            key=Callback(Stub),
+            title=item.title,
+            summary="&#xa;".join(filter(None, [item.original_title, item.year])),
+            thumb=Resource.ContentsOfURLWithFallback(item.poster)
+        ) for item in items
+    ]
+    # if prev_page:
+    #     items_menu_objects.insert(0, DirectoryObject(
+    #         key=Callback(ItemsMenu, url=prev_page),
+    #         title='<--',
+    #         summary="Previous page"
+    #     ))
+    if next_page:
+        items_menu_objects.append(DirectoryObject(
+            key=Callback(ItemsMenu, url=next_page),
+            title='-->',
+            summary="Next page"
+        ))
+
+    items_menu = ObjectContainer(objects=items_menu_objects)
 
     return items_menu
+
+
+@route('/video/fsua/movie')
+def MovieMenu():
+    pass
