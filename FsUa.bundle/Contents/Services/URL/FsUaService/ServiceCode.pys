@@ -8,5 +8,3 @@ def MediaObjectsForURL(url):
 
 def NormalizeURL(url):
 	pass
-
-

@@ -1,6 +1,6 @@
 from descriptors import *
 
-
+ICON = 'icon-default.png'
 BASE_SITE_URL = "http://fs.to"  # "http://fs.ua"
 
 
@@ -16,14 +16,14 @@ class Sorting:
     RATING = 'sort=rating'
     YEAR = 'sort=year'
 
-    @staticmethod
-    def GetCurrent():
+    @classmethod
+    def GetCurrent(cls):
         if Prefs['sorting'] == "newness":
-            return Sorting.NEW
+            return cls.NEW
         elif Prefs['sorting'] == "rating":
-            return Sorting.RATING
+            return cls.RATING
         else:
-            return Sorting.YEAR
+            return cls.YEAR
 
 
 MEDIA_CATEGORY = {
@@ -47,7 +47,7 @@ MEDIA_CATEGORY = {
 
 
 def Start():
-    pass
+    DirectoryObject.thumb = R(ICON)
 
 
 @handler('/video/fsua', 'FS.ua')
@@ -135,41 +135,35 @@ def ItemsMenu(url):
                 original_title, year = the_rest
             picture = title_elem.xpath("string(img/@src)")
 
+            link = BASE_SITE_URL + item.xpath('string(a[@class="subject-link"]/@href)')
+
             parsed_items.append(ItemDescriptor(
                 title=title,
                 original_title=original_title,
-                year=year,
-                poster=picture
+                year=int(year.strip("()").split('-')[0]),
+                poster=picture,
+                link=link
             ))
-
-        # previous_link = items_page.cssselect('.previous-link')
-        prev_page = None  # previous_link and (BASE_SITE_URL + previous_link[0].xpath("string(@href)"))
 
         next_link = items_page.cssselect('.next-link')
         next_page = next_link and (BASE_SITE_URL + next_link[0].xpath("string(@href)"))
 
-        return parsed_items, prev_page, next_page
+        return parsed_items, next_page
 
-    items, prev_page, next_page = ParseItems(url)
+    items, next_page = ParseItems(url)
     items_menu_objects = [
         DirectoryObject(
-            key=Callback(Stub),
+            key=Callback(MovieMenu, title=item.title, original_title=item.original_title, year=item.year, poster=item.poster, link=item.link),
             title=item.title,
-            summary="&#xa;".join(filter(None, [item.original_title, item.year])),
+            summary='\n'.join(filter(None, [item.original_title, "(%d)" % item.year])),
             thumb=Resource.ContentsOfURLWithFallback(item.poster)
         ) for item in items
     ]
-    # if prev_page:
-    #     items_menu_objects.insert(0, DirectoryObject(
-    #         key=Callback(ItemsMenu, url=prev_page),
-    #         title='<--',
-    #         summary="Previous page"
-    #     ))
+
     if next_page:
-        items_menu_objects.append(DirectoryObject(
+        items_menu_objects.append(NextPageObject(
             key=Callback(ItemsMenu, url=next_page),
-            title='-->',
-            summary="Next page"
+            title='Next...'
         ))
 
     items_menu = ObjectContainer(objects=items_menu_objects)
@@ -178,5 +172,71 @@ def ItemsMenu(url):
 
 
 @route('/video/fsua/movie')
-def MovieMenu():
-    pass
+def MovieMenu(**item_dict):
+    def ParseMovie(item):
+        movie_page = HTML.ElementFromURL(url=item['link'])
+
+        additional_info = {}
+        additional_info['summary'] = movie_page.cssselect('.item-info > p')[0].text_content()
+        additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
+
+        info_table = movie_page.cssselect('.item-info tr')
+        for row in info_table:
+            caption_elem, values_elem = row.xpath('td')
+            caption = caption_elem.xpath('string(text())').strip()
+            values = values_elem.xpath('a/text()')
+            if caption == 'Жанр:':
+                additional_info['genres'] = values
+            elif caption == 'Страна:':
+                additional_info['countries'] = values
+            elif caption == 'Режиссёр:':
+                additional_info['directors'] = values
+
+        item.update(additional_info)
+        return MovieDescriptor(**item)
+
+    movie = ParseMovie(item_dict)
+
+    # movie_object = MovieObject(
+    #     title=movie.title,
+    #     original_title=movie.original_title,
+    #     year=movie.year,
+    #     url='http://www.youtube.com/watch?v=w0ffwDYo00Q'
+    # )
+    movie_object = ObjectContainer(
+        objects=[
+            DirectoryObject(
+                key=Callback(Stub),
+                title=movie.title,
+                summary=movie.summary,
+                thumb=Resource.ContentsOfURLWithFallback(movie.poster)
+            ),
+            DirectoryObject(
+                key=Callback(Stub),
+                title="Original title",
+                summary=movie.original_title
+            ),
+            DirectoryObject(
+                key=Callback(Stub),
+                title="Year",
+                summary=unicode(movie.year)
+            ),
+            DirectoryObject(
+                key=Callback(Stub),
+                title="Genres",
+                summary=", ".join(movie.genres)
+            ),
+            DirectoryObject(
+                key=Callback(Stub),
+                title="Countries",
+                summary=", ".join(movie.countries)
+            ),
+            DirectoryObject(
+                key=Callback(Stub),
+                title="Directors",
+                summary=", ".join(movie.directors)
+            )
+        ]
+    )
+
+    return movie_object
