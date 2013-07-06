@@ -197,46 +197,15 @@ def MovieMenu(**item_dict):
 
     movie = ParseMovie(item_dict)
 
-    # movie_object = MovieObject(
-    #     title=movie.title,
-    #     original_title=movie.original_title,
-    #     year=movie.year,
-    #     url='http://www.youtube.com/watch?v=w0ffwDYo00Q'
-    # )
-    movie_object = ObjectContainer(
-        objects=[
-            DirectoryObject(
-                key=Callback(Stub),
-                title=movie.title,
-                summary=movie.summary,
-                thumb=Resource.ContentsOfURLWithFallback(movie.poster)
-            ),
-            DirectoryObject(
-                key=Callback(Stub),
-                title="Original title",
-                summary=movie.original_title
-            ),
-            DirectoryObject(
-                key=Callback(Stub),
-                title="Year",
-                summary=unicode(movie.year)
-            ),
-            DirectoryObject(
-                key=Callback(Stub),
-                title="Genres",
-                summary=", ".join(movie.genres)
-            ),
-            DirectoryObject(
-                key=Callback(Stub),
-                title="Countries",
-                summary=", ".join(movie.countries)
-            ),
-            DirectoryObject(
-                key=Callback(Stub),
-                title="Directors",
-                summary=", ".join(movie.directors)
-            )
-        ]
+    movie_object = MovieObject(
+        title=movie.title,
+        original_title=movie.original_title,
+        year=movie.year,
+        genres=movie.genres,
+        directors=movie.directors,
+        countries=movie.countries,
+        thumb=movie.poster,
+        url='http://fs.to/view/i418TqBqdu4hR4Y0wgUPtM4?play&file=1857596'
     )
 
-    return movie_object
+    return ObjectContainer(objects=[movie_object])
