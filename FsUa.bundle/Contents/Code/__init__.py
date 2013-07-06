@@ -11,6 +11,21 @@ class MediaCategoryType:
     CARTOONSERIALS = '3'
 
 
+class Sorting:
+    NEW = 'sort=new'
+    RATING = 'sort=rating'
+    YEAR = 'sort=year'
+
+    @staticmethod
+    def GetCurrent():
+        if Prefs['sorting'] == "newness":
+            return Sorting.NEW
+        elif Prefs['sorting'] == "rating":
+            return Sorting.RATING
+        else:
+            return Sorting.YEAR
+
+
 MEDIA_CATEGORY = {
     MediaCategoryType.FILMS: {
         'title': "Films",
@@ -45,6 +60,7 @@ def MainMenu():
             ) for key, value in MEDIA_CATEGORY.iteritems()
         ]
     )
+    main_menu.add(PrefsObject(title="Settings"))
 
     return main_menu
 
@@ -93,7 +109,7 @@ def GenresMenu(media_category):
             DirectoryObject(
                 title=genre.title,
                 summary=genre.link,
-                key=Callback(ItemsMenu, url=genre.link)
+                key=Callback(ItemsMenu, url="{url}?{args}".format(url=genre.link, args=Sorting.GetCurrent()))
             ) for genre in genres
         ]
     )
