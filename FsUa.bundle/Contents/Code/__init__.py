@@ -1,3 +1,9 @@
+from descriptors import *
+
+
+BASE_SITE_URL = "http://fs.to"  # "http://fs.ua"
+
+
 class MediaCategoryType:
     FILMS = '0'
     SERIALS = '1'
@@ -72,7 +78,12 @@ def GenresMenu(media_category):
         genre_selector = url.split('/')[-2]
         genre_elements = genres_page.cssselect('.%s .b-list-links > li:not([class=noitems]) > a' % genre_selector)
 
-        parsed_genres = [(genre.xpath("string(text())"), genre.xpath("string(@href)")) for genre in genre_elements]
+        parsed_genres = [
+            GenreDescriptor(
+                title=genre.xpath("string(text())"),
+                link=BASE_SITE_URL + genre.xpath("string(@href)")
+            ) for genre in genre_elements
+        ]
 
         return parsed_genres
 
@@ -80,28 +91,49 @@ def GenresMenu(media_category):
     genres_menu = ObjectContainer(
         objects=[
             DirectoryObject(
-                title=title,
-                summary=link,
-                key=Callback(Stub)
-            ) for title, link in genres
+                title=genre.title,
+                summary=genre.link,
+                key=Callback(ItemsMenu, url=genre.link)
+            ) for genre in genres
         ]
     )
 
     return genres_menu
 
 
-
-
 @route('/video/fsua/items', methods='GET')
 def ItemsMenu(url):
     def ParseItems(url):
         items_page = HTML.ElementFromURL(url=url)
-        items_elements = items.page.cssselect('.b-section-list .b-poster-section')
+        items_elements = items_page.cssselect('.b-section-list .b-poster-section')
 
-        parsed_items = [
-            
+        parsed_items = []
+        for item in items_elements:
+            title_elem = item.cssselect('.m-full > span')[0]
+            title = title_elem.xpath("string(text())")
+            the_rest = title_elem.xpath("p/text()")
+            if len(the_rest) == 1:
+                original_title = ''
+                year = the_rest[0]
+            else:
+                original_title, year = the_rest
+
+            parsed_items.append(ItemDescriptor(
+                title=title,
+                original_title=original_title,
+                year=year
+            ))
+        return parsed_items
+
+    items = ParseItems(url)
+    items_menu = ObjectContainer(
+        objects=[
+            DirectoryObject(
+                key=Callback(Stub),
+                title=item.title,
+                summary="&#xa;".join(filter(None, [item.original_title, item.year]))
+            ) for item in items
         ]
+    )
 
-    pass
-
-
+    return items_menu
