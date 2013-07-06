@@ -118,94 +118,91 @@ def GenresMenu(media_category):
 
 
 @route('/video/fsua/items', methods='GET')
-def ItemsMenu(url):
-    def ParseItems(url):
-        items_page = HTML.ElementFromURL(url=url)
+def ItemsMenu(url, page=0):
+    results = {}
+    next_page = {'val': False}
+
+    @parallelize
+    def ParseItems():
+        page_url = "{url}&page={page}".format(url=url, page=page) if page > 0 else url
+        Log.Debug(page_url)
+        items_page = HTML.ElementFromURL(url=page_url)
         items_elements = items_page.cssselect('.b-section-list .b-poster-section')
 
-        parsed_items = []
-        for item in items_elements:
+        next_page['val'] = items_page.cssselect('.next-link') is not None
+        # next_page['url'] = next_link and (BASE_SITE_URL + next_link[0].xpath("string(@href)"))
+
+        for num in range(len(items_elements)):
+            item = items_elements[num]
             title_elem = item.cssselect('.m-full')[0]
+
             title = title_elem.xpath("string(span/text())")
+
             the_rest = title_elem.xpath("span/p/text()")
             if len(the_rest) == 1:
                 original_title = ''
                 year = the_rest[0]
             else:
                 original_title, year = the_rest
-            picture = title_elem.xpath("string(img/@src)")
+            year = int(year.strip("()").split('-')[0])
 
             link = BASE_SITE_URL + item.xpath('string(a[@class="subject-link"]/@href)')
 
-            parsed_items.append(ItemDescriptor(
-                title=title,
-                original_title=original_title,
-                year=int(year.strip("()").split('-')[0]),
-                poster=picture,
-                link=link
-            ))
+            descr = {
+                'title': title,
+                'original_title': original_title,
+                'year': year,
+                'link': link
+            }
 
-        next_link = items_page.cssselect('.next-link')
-        next_page = next_link and (BASE_SITE_URL + next_link[0].xpath("string(@href)"))
+            @task
+            def ParseMovie(link=link, descr=descr, num=num):
+                movie_page = HTML.ElementFromURL(link)
 
-        return parsed_items, next_page
+                additional_info = {}
+                additional_info['summary'] = movie_page.cssselect('.item-info > p')[0].text_content()
+                additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
 
-    items, next_page = ParseItems(url)
+                info_table = movie_page.cssselect('.item-info tr')
+                for row in info_table:
+                    caption_elem, values_elem = row.xpath('td')
+                    caption = caption_elem.xpath('string(text())').strip()
+                    values = values_elem.xpath('a/text()')
+                    if caption == 'Жанр:':
+                        additional_info['genres'] = values
+                    elif caption == 'Страна:':
+                        additional_info['countries'] = values
+                    elif caption == 'Режиссёр:':
+                        additional_info['directors'] = values
+
+                additional_info['media_url'] = BASE_SITE_URL + movie_page.cssselect('.b-view-material')[0].xpath('string(a/@href)')
+
+                descr.update(additional_info)
+                results[num] = MovieDescriptor(**descr)
+
+    keys = results.keys()
+    keys.sort()
+
+    # items, next_page = ParseItems(url)
     items_menu_objects = [
-        DirectoryObject(
-            key=Callback(MovieMenu, title=item.title, original_title=item.original_title, year=item.year, poster=item.poster, link=item.link),
-            title=item.title,
-            summary='\n'.join(filter(None, [item.original_title, "(%d)" % item.year])),
-            thumb=Resource.ContentsOfURLWithFallback(item.poster)
-        ) for item in items
+        MovieObject(
+            title=results[key].title,
+            original_title=results[key].original_title,
+            year=results[key].year,
+            genres=results[key].genres,
+            directors=results[key].directors,
+            countries=results[key].countries,
+            thumb=results[key].poster,
+            url=results[key].media_url
+        ) for key in keys
     ]
 
-    if next_page:
+    if next_page['val']:
         items_menu_objects.append(NextPageObject(
-            key=Callback(ItemsMenu, url=next_page),
-            title='Next...'
+            key=Callback(ItemsMenu, url=url, page=page+1),
+            title='>> Page {page}'.format(page=page+2)
         ))
 
     items_menu = ObjectContainer(objects=items_menu_objects)
 
     return items_menu
-
-
-@route('/video/fsua/movie')
-def MovieMenu(**item_dict):
-    def ParseMovie(item):
-        movie_page = HTML.ElementFromURL(url=item['link'])
-
-        additional_info = {}
-        additional_info['summary'] = movie_page.cssselect('.item-info > p')[0].text_content()
-        additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
-
-        info_table = movie_page.cssselect('.item-info tr')
-        for row in info_table:
-            caption_elem, values_elem = row.xpath('td')
-            caption = caption_elem.xpath('string(text())').strip()
-            values = values_elem.xpath('a/text()')
-            if caption == 'Жанр:':
-                additional_info['genres'] = values
-            elif caption == 'Страна:':
-                additional_info['countries'] = values
-            elif caption == 'Режиссёр:':
-                additional_info['directors'] = values
-
-        item.update(additional_info)
-        return MovieDescriptor(**item)
-
-    movie = ParseMovie(item_dict)
-
-    movie_object = MovieObject(
-        title=movie.title,
-        original_title=movie.original_title,
-        year=movie.year,
-        genres=movie.genres,
-        directors=movie.directors,
-        countries=movie.countries,
-        thumb=movie.poster,
-        url='http://fs.to/view/i418TqBqdu4hR4Y0wgUPtM4?play&file=1857596'
-    )
-
-    return ObjectContainer(objects=[movie_object])

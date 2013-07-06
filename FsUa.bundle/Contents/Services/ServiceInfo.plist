@@ -9,6 +9,7 @@
 			<key>URLPatterns</key>
 			<array>
 				<string>http://fs\.to/view/[A-Za-z0-9_]+\?play&amp;file=\d+</string>
+				<string>http://fs\.to/view/[A-Za-z0-9_]+</string>
 			</array>
 			<key>TestURLs</key>
 			<array>

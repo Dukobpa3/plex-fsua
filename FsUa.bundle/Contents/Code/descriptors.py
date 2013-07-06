@@ -13,11 +13,10 @@ class GenreDescriptor(object):
 
 
 class ItemDescriptor(object):
-    def __init__(self, title, original_title, year, poster, link):
+    def __init__(self, title, original_title, year, link):
         self.title = unicode(title)
         self.original_title = unicode(original_title)
         self.year = int(year)
-        self.poster = poster
         self.link = link
 
 
@@ -33,11 +32,14 @@ class MovieDescriptor(ItemDescriptor):
                  genres=[],
                  countries=[],
                  directors=[],
-                 summary=''):
-        ItemDescriptor.__init__(self, title, original_title, year, poster, link)
+                 summary='',
+                 media_url=''):
+        ItemDescriptor.__init__(self, title, original_title, year, link)
+        self.poster = poster
         self.duration = duration
         self.rating = rating
         self.genres = genres
         self.countries = countries
         self.directors = directors
         self.summary = unicode(summary)
+        self.media_url = media_url
