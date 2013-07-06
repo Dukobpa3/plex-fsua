@@ -109,19 +109,21 @@ def ItemsMenu(url):
 
         parsed_items = []
         for item in items_elements:
-            title_elem = item.cssselect('.m-full > span')[0]
-            title = title_elem.xpath("string(text())")
-            the_rest = title_elem.xpath("p/text()")
+            title_elem = item.cssselect('.m-full')[0]
+            title = title_elem.xpath("string(span/text())")
+            the_rest = title_elem.xpath("span/p/text()")
             if len(the_rest) == 1:
                 original_title = ''
                 year = the_rest[0]
             else:
                 original_title, year = the_rest
+            picture = title_elem.xpath("string(img/@src)")
 
             parsed_items.append(ItemDescriptor(
                 title=title,
                 original_title=original_title,
-                year=year
+                year=year,
+                poster=picture
             ))
         return parsed_items
 
@@ -131,7 +133,8 @@ def ItemsMenu(url):
             DirectoryObject(
                 key=Callback(Stub),
                 title=item.title,
-                summary="&#xa;".join(filter(None, [item.original_title, item.year]))
+                summary="&#xa;".join(filter(None, [item.original_title, item.year])),
+                thumb=Resource.ContentsOfURLWithFallback(item.poster)
             ) for item in items
         ]
     )

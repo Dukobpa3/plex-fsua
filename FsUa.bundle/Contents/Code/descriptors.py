@@ -13,7 +13,8 @@ class GenreDescriptor(object):
 
 
 class ItemDescriptor(object):
-    def __init__(self, title, original_title, year):
+    def __init__(self, title, original_title, year, poster):
         self.title = title
         self.original_title = original_title
         self.year = year
+        self.poster = poster
