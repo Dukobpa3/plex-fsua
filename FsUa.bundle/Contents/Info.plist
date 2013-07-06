@@ -14,7 +14,7 @@
      <key>PlexClientPlatforms</key>
      <string>Windows,LGTV</string>
 
-     <key>PlexURLServices</key>
+<!--      <key>PlexURLServices</key>
      <dict>
         <key>FsUaService</key>
         <dict>
@@ -36,7 +36,7 @@
             <key>Identifier</key>
             <string>com.olendarenko.plex.services.fsuasearch</string>
         </dict>
-     </dict>
+     </dict> -->
 
 <!--      <key>PlexAudioCodec</key>
      <array>

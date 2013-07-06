@@ -1,10 +1,26 @@
-def MetadataObjectForURL(url):
-	pass
+import re
 
 
 def MediaObjectsForURL(url):
-	pass
+    page = HTML.ElementFromURL(url=url)
+    script_part = page.cssselect('.m-player-movie script')[0].text_content()
 
+    begin = script_part.index('playlist:')
+    begin = script_part.index('[', begin)
+    end = script_part.index(']', begin)
 
-def NormalizeURL(url):
-	pass
+    playlist = script_part[begin:end+1]
+    movie = JSON.ObjectFromString(re.sub(r'(?<=[\s{])(\w+):', r'"\1":', playlist))[0]
+
+    media_object = MediaObject(
+        container=Container.MP4,
+        video_codec=VideoCodec.H264,
+        optimized_for_streaming=True,
+        parts=[
+            PartObject(
+                key='http://fs.to' + movie['url']
+            )
+        ]
+    )
+
+    return [media_object]
