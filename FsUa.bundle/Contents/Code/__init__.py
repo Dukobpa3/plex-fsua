@@ -2,6 +2,7 @@ from descriptors import *
 
 ICON = 'icon-default.png'
 BASE_SITE_URL = "http://fs.to"  # "http://fs.ua"
+SEARCH_URL = "http://fs.to/video/search.aspx?search=%s"
 
 
 class MediaCategoryType:
@@ -60,6 +61,11 @@ def MainMenu():
             ) for key, value in MEDIA_CATEGORY.iteritems()
         ]
     )
+    main_menu.add(InputDirectoryObject(
+        title="Search",
+        prompt="Search for...",
+        key=Callback(Search)
+    ))
     main_menu.add(PrefsObject(title="Settings"))
 
     return main_menu
@@ -125,7 +131,6 @@ def ItemsMenu(url, page=0):
     @parallelize
     def ParseItems():
         page_url = "{url}&page={page}".format(url=url, page=page) if page > 0 else url
-        Log.Debug(page_url)
         items_page = HTML.ElementFromURL(url=page_url)
         items_elements = items_page.cssselect('.b-section-list .b-poster-section')
 
@@ -206,3 +211,82 @@ def ItemsMenu(url, page=0):
     items_menu = ObjectContainer(objects=items_menu_objects)
 
     return items_menu
+
+
+@route('/video/fsua/search/{query}')
+def Search(query):
+    results = {}
+
+    @parallelize
+    def ParseItems():
+        result_page = HTML.ElementFromURL(SEARCH_URL % String.Quote(query, usePlus=True))
+        results_elements = result_page.cssselect('.b-search-results table:first-of-type tr .image-wrap')
+
+        # next_page['url'] = next_link and (BASE_SITE_URL + next_link[0].xpath("string(@href)"))
+
+        for num in range(len(results_elements)):
+            result = results_elements[num]
+            title_elem = result.xpath('string(a/@title)')
+
+            Log.Debug(title_elem)
+            title, the_rest = title_elem.split('/')
+            title = title.strip()
+
+            split_char = the_rest.rfind(' ')
+            original_title = the_rest[:split_char].strip()
+            year = int(the_rest[split_char + 1:].strip('( )').split('-')[0])
+
+            link = BASE_SITE_URL + result.xpath('string(a/@href)')
+
+            descr = {
+                'title': title,
+                'original_title': original_title,
+                'year': year,
+                'link': link
+            }
+
+            @task
+            def ParseMovie(link=link, descr=descr, num=num):
+                movie_page = HTML.ElementFromURL(link)
+
+                additional_info = {}
+                additional_info['summary'] = movie_page.cssselect('.item-info > p')[0].text_content()
+                additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
+
+                info_table = movie_page.cssselect('.item-info tr')
+                for row in info_table:
+                    caption_elem, values_elem = row.xpath('td')
+                    caption = caption_elem.xpath('string(text())').strip()
+                    values = values_elem.xpath('a/text()')
+                    if caption == 'Жанр:':
+                        additional_info['genres'] = values
+                    elif caption == 'Страна:':
+                        additional_info['countries'] = values
+                    elif caption == 'Режиссёр:':
+                        additional_info['directors'] = values
+
+                additional_info['media_url'] = BASE_SITE_URL + movie_page.cssselect('.b-view-material')[0].xpath('string(a/@href)')
+
+                descr.update(additional_info)
+                results[num] = MovieDescriptor(**descr)
+
+    keys = results.keys()
+    keys.sort()
+
+    # items, next_page = ParseItems(url)
+    results_menu_objects = [
+        MovieObject(
+            title=results[key].title,
+            original_title=results[key].original_title,
+            year=results[key].year,
+            genres=results[key].genres,
+            directors=results[key].directors,
+            countries=results[key].countries,
+            thumb=results[key].poster,
+            url=results[key].media_url
+        ) for key in keys
+    ]
+
+    results_menu = ObjectContainer(objects=results_menu_objects)
+
+    return results_menu
