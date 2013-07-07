@@ -135,7 +135,6 @@ def ItemsMenu(url, page=0):
         items_elements = items_page.cssselect('.b-section-list .b-poster-section')
 
         next_page['val'] = items_page.cssselect('.next-link') is not None
-        # next_page['url'] = next_link and (BASE_SITE_URL + next_link[0].xpath("string(@href)"))
 
         for num in range(len(items_elements)):
             item = items_elements[num]
@@ -188,19 +187,7 @@ def ItemsMenu(url, page=0):
     keys = results.keys()
     keys.sort()
 
-    # items, next_page = ParseItems(url)
-    items_menu_objects = [
-        MovieObject(
-            title=results[key].title,
-            original_title=results[key].original_title,
-            year=results[key].year,
-            genres=results[key].genres,
-            directors=results[key].directors,
-            countries=results[key].countries,
-            thumb=results[key].poster,
-            url=results[key].media_url
-        ) for key in keys
-    ]
+    items_menu_objects = [results[key].ToMovieObject() for key in keys]
 
     if next_page['val']:
         items_menu_objects.append(NextPageObject(
@@ -221,8 +208,6 @@ def Search(query):
     def ParseItems():
         result_page = HTML.ElementFromURL(SEARCH_URL % String.Quote(query, usePlus=True))
         results_elements = result_page.cssselect('.b-search-results table:first-of-type tr .image-wrap')
-
-        # next_page['url'] = next_link and (BASE_SITE_URL + next_link[0].xpath("string(@href)"))
 
         for num in range(len(results_elements)):
             result = results_elements[num]
@@ -273,20 +258,7 @@ def Search(query):
     keys = results.keys()
     keys.sort()
 
-    # items, next_page = ParseItems(url)
-    results_menu_objects = [
-        MovieObject(
-            title=results[key].title,
-            original_title=results[key].original_title,
-            year=results[key].year,
-            genres=results[key].genres,
-            directors=results[key].directors,
-            countries=results[key].countries,
-            thumb=results[key].poster,
-            url=results[key].media_url
-        ) for key in keys
-    ]
-
+    results_menu_objects = [results[key].ToMovieObject() for key in keys]
     results_menu = ObjectContainer(objects=results_menu_objects)
 
     return results_menu

@@ -43,3 +43,13 @@ class MovieDescriptor(ItemDescriptor):
         self.directors = directors
         self.summary = unicode(summary)
         self.media_url = media_url
+
+    def ToMovieObject(self):
+        return MovieObject(title=self.title,
+                           original_title=self.original_title,
+                           year=self.year,
+                           genres=self.genres,
+                           directors=self.directors,
+                           countries=self.countries,
+                           thumb=self.poster,
+                           url=self.media_url)
