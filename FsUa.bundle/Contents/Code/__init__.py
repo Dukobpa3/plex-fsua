@@ -1,8 +1,9 @@
 from descriptors import *
+import re
 
 ICON = 'icon-default.png'
-BASE_SITE_URL = "http://fs.to"  # "http://fs.ua"
-SEARCH_URL = "http://fs.to/video/search.aspx?search=%s"
+BASE_SITE_URL = "http://brb.to"  # "http://brb.ua"
+SEARCH_URL = "http://brb.to/video/search.aspx?search=%s"
 
 
 class MediaCategoryType:
@@ -30,19 +31,19 @@ class Sorting:
 MEDIA_CATEGORY = {
     MediaCategoryType.FILMS: {
         'title': "Films",
-        'genre_url': 'http://fs.to/video/films/group/film_genre/',
+        'genre_url': 'http://brb.to/video/films/group/film_genre/',
     },
     MediaCategoryType.SERIALS: {
         'title': "Serials",
-        'genre_url': 'http://fs.to/video/serials/group/genre/',
+        'genre_url': 'http://brb.to/video/serials/group/genre/',
     },
     MediaCategoryType.CARTOONS: {
         'title': "Cartoons",
-        'genre_url': 'http://fs.to/video/cartoons/group/cartoon_genre/',
+        'genre_url': 'http://brb.to/video/cartoons/group/cartoon_genre/',
     },
     MediaCategoryType.CARTOONSERIALS: {
         'title': "Cartoon Serials",
-        'genre_url': 'http://fs.to/video/cartoonserials/group/genre/',
+        'genre_url': 'http://brb.to/video/cartoonserials/group/genre/',
     }
 }
 
@@ -164,8 +165,8 @@ def ItemsMenu(url, page=0):
                 movie_page = HTML.ElementFromURL(link)
 
                 additional_info = {}
-                additional_info['summary'] = movie_page.cssselect('.item-info > p')[0].text_content()
-                additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
+                additional_info['summary'] = movie_page.cssselect('.item-decription')[0].text_content()
+                additional_info['poster'] = re.sub(r'url\(([^\)]+)\)', r'\1', movie_page.cssselect('.poster-main a')[0].xpath('string(@style)'))
 
                 info_table = movie_page.cssselect('.item-info tr')
                 for row in info_table:

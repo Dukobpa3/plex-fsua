@@ -1,9 +1,9 @@
 [
-	{
-		"id": "sorting",
-		"label": "Sort by",
-		"type": "enum",
-		"values": ["newness", "rating", "year"],
-		"default": "newness"
-	}
+    {
+        "id": "sorting",
+        "label": "Sort by",
+        "type": "enum",
+        "values": ["newness", "rating", "year"],
+        "default": "newness"
+    }
 ]

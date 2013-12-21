@@ -3,24 +3,28 @@ import re
 
 def MediaObjectsForURL(url):
     page = HTML.ElementFromURL(url=url)
-    script_part = page.cssselect('.m-player-movie script')[0].text_content()
+    script_part_element = page.cssselect('.m-player-movie script')
 
-    begin = script_part.index('playlist:')
-    begin = script_part.index('[', begin)
-    end = script_part.index(']', begin)
+    result = None
+    if len(script_part_element) == 1:
+        script_part = script_part_element[0].text_content()
 
-    playlist = script_part[begin:end+1]
-    movie = JSON.ObjectFromString(re.sub(r'(?<=[\s{])(\w+):', r'"\1":', playlist))[0]
+        begin = script_part.index('playlist:')
+        begin = script_part.index('[', begin)
+        end = script_part.index(']', begin)
 
-    media_object = MediaObject(
-        container=Container.MP4,
-        video_codec=VideoCodec.H264,
-        optimized_for_streaming=True,
-        parts=[
-            PartObject(
-                key='http://fs.to' + movie['url']
-            )
-        ]
-    )
+        playlist = script_part[begin:end+1]
+        movie = JSON.ObjectFromString(re.sub(r'(?<=[\s{])(\w+):', r'"\1":', playlist))[0]
 
-    return [media_object]
+        result = [MediaObject(
+            container=Container.MP4,
+            video_codec=VideoCodec.H264,
+            optimized_for_streaming=True,
+            parts=[
+                PartObject(
+                    key='http://brb.to' + movie['url']
+                )
+            ]
+        )]
+
+    return result
