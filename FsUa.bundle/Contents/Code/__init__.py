@@ -141,7 +141,7 @@ def ItemsMenu(url, page=0):
         for num in range(len(items_elements)):
             item = items_elements[num]
             title_elem = item.cssselect('.b-poster-tile__title-full')[0]
-            Log('titleelm:%s',title_elem)
+#            Log('titleelm:%s',title_elem)
 
             title = title_elem.xpath("string(text())").strip()
 
