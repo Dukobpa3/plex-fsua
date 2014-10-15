@@ -1,9 +1,8 @@
 from descriptors import *
-import re
 
 ICON = 'icon-default.png'
-BASE_SITE_URL = "http://brb.to"  # "http://brb.ua"
-SEARCH_URL = "http://brb.to/video/search.aspx?search=%s"
+BASE_SITE_URL = "http://fs.to"  # "http://fs.ua"
+SEARCH_URL = "http://fs.to/video/search.aspx?search=%s"
 
 
 class MediaCategoryType:
@@ -31,19 +30,19 @@ class Sorting:
 MEDIA_CATEGORY = {
     MediaCategoryType.FILMS: {
         'title': "Films",
-        'genre_url': 'http://brb.to/video/films/group/film_genre/',
+        'genre_url': 'http://fs.to/video/films/group/film_genre/',
     },
     MediaCategoryType.SERIALS: {
         'title': "Serials",
-        'genre_url': 'http://brb.to/video/serials/group/genre/',
+        'genre_url': 'http://fs.to/video/serials/group/genre/',
     },
     MediaCategoryType.CARTOONS: {
         'title': "Cartoons",
-        'genre_url': 'http://brb.to/video/cartoons/group/cartoon_genre/',
+        'genre_url': 'http://fs.to/video/cartoons/group/cartoon_genre/',
     },
     MediaCategoryType.CARTOONSERIALS: {
         'title': "Cartoon Serials",
-        'genre_url': 'http://brb.to/video/cartoonserials/group/genre/',
+        'genre_url': 'http://fs.to/video/cartoonserials/group/genre/',
     }
 }
 
@@ -97,7 +96,7 @@ def GenresMenu(media_category):
         '''Return list of tuples in the following form: (genre_title, genre_url)'''
 
         url = MEDIA_CATEGORY[media_category]['genre_url']
-        genres_page = HTML.ElementFromURL(url=url)
+        genres_page = HTML.ElementFromURL(url)
         genre_selector = url.split('/')[-2]
         genre_elements = genres_page.cssselect('.%s .b-list-links > li:not([class=noitems]) > a' % genre_selector)
 
@@ -133,25 +132,26 @@ def ItemsMenu(url, page=0):
     def ParseItems():
         page_url = "{url}&page={page}".format(url=url, page=page) if page > 0 else url
         items_page = HTML.ElementFromURL(url=page_url)
-        items_elements = items_page.cssselect('.b-section-list .b-poster-section')
+        items_elements = items_page.cssselect('.b-section-list .b-poster-tile')  # .b-poster-section
 
         next_page['val'] = items_page.cssselect('.next-link') is not None
+        verb1=len(items_elements)
+        Log('elm cnt:%s', verb1)
 
         for num in range(len(items_elements)):
             item = items_elements[num]
-            title_elem = item.cssselect('.m-full')[0]
+            title_elem = item.cssselect('.b-poster-tile__title-full')[0]
+            Log('titleelm:%s',title_elem)
 
-            title = title_elem.xpath("string(span/text())")
+            title = title_elem.xpath("string(text())").strip()
 
-            the_rest = title_elem.xpath("span/p/text()")
+            the_rest = item.cssselect(".b-poster-tile__title-info-items")
             if len(the_rest) == 1:
-                original_title = ''
-                year = the_rest[0]
-            else:
-                original_title, year = the_rest
-            year = int(year.strip("()").split('-')[0])
+                original_title = the_rest[0].text
+                year = original_title.split('●')[0]
+            year = int(year.strip("()"))
 
-            link = BASE_SITE_URL + item.xpath('string(a[@class="subject-link"]/@href)')
+            link = BASE_SITE_URL + item.xpath('string(a[@class="b-poster-tile__link"]/@href)')
 
             descr = {
                 'title': title,
@@ -159,28 +159,32 @@ def ItemsMenu(url, page=0):
                 'year': year,
                 'link': link
             }
+#            Log('ds:%s',descr)
 
             @task
             def ParseMovie(link=link, descr=descr, num=num):
                 movie_page = HTML.ElementFromURL(link)
 
                 additional_info = {}
-                additional_info['summary'] = movie_page.cssselect('.item-decription')[0].text_content()
-                additional_info['poster'] = re.sub(r'url\(([^\)]+)\)', r'\1', movie_page.cssselect('.poster-main a')[0].xpath('string(@style)'))
+                additional_info['summary'] = movie_page.cssselect('.b-tab-item__description p')[0].text_content()
+                additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
 
                 info_table = movie_page.cssselect('.item-info tr')
                 for row in info_table:
                     caption_elem, values_elem = row.xpath('td')
                     caption = caption_elem.xpath('string(text())').strip()
-                    values = values_elem.xpath('a/text()')
+#                    values = values_elem.text_content().strip()
+                    values = values_elem.xpath('span/a/span/text()')
                     if caption == 'Жанр:':
                         additional_info['genres'] = values
                     elif caption == 'Страна:':
-                        additional_info['countries'] = values
+                        additional_info['countries'] = values_elem.xpath('a/span/text()')
                     elif caption == 'Режиссёр:':
                         additional_info['directors'] = values
 
                 additional_info['media_url'] = BASE_SITE_URL + movie_page.cssselect('.b-view-material')[0].xpath('string(a/@href)')
+#                Log('ainfo: %s', additional_info);
+
 
                 descr.update(additional_info)
                 results[num] = MovieDescriptor(**descr)
@@ -197,6 +201,12 @@ def ItemsMenu(url, page=0):
         ))
 
     items_menu = ObjectContainer(objects=items_menu_objects)
+#    Log('url: %s', HTTPLiveStreamURL('http://fs.to/video/films/view/iw4TKfLYcDBeUZ71ZHmwTe'));
+#    items_menu = ObjectContainer(objects = [MovieObject(
+#        title='ya video',
+#        url='http://fs.to/video/films/view/iw4TKfLYcDBeUZ71ZHmwTe',
+#        url='http://fs.to/view/iw4TKfLYcDBeUZ71ZHmwTe',
+#     )])
 
     return items_menu
 
