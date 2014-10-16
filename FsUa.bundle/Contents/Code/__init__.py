@@ -264,7 +264,6 @@ def Search(query):
                         return
                     
                     additional_info['summary'] = movie_page.cssselect('.b-tab-item__description p')[0].text_content()
-                    Log('summary:%s', additional_info['summary'])
                     additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
 
                     info_table = movie_page.cssselect('.item-info tr')
@@ -284,8 +283,8 @@ def Search(query):
                     descr.update(additional_info)
                     results[num] = MovieDescriptor(**descr)
                 except:
-                    e = sys.exc_info()[0]
-                    Log('Error in ParseMovie url:%s error:%s', link, e)
+                    e = sys.exc_info()[1]
+                    Log.Error('Error in ParseMovie url:%s error:%s', link, e)
                     results[num] = None
                     return
 

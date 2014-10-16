@@ -25,13 +25,15 @@ def MediaObjectsForURL(url):
         playlist = re.sub(r':\s+\'(.*?)\'\s*?([,\]\}])', r': "\1"\2', playlist)
         # kill "false,}" in the original JSON
         playlist = re.sub(r',\s*?}', r'}', playlist)
-        movie = JSON.ObjectFromString(playlist)[0]
-
-        media_object.parts=[
-            PartObject(
-                key='http://fs.to' + movie['url']
+        
+        movies = JSON.ObjectFromString(playlist)
+        media_object.parts = []
+        for key in range(len(movies)):
+            movie = movies[key]
+            Log('mov parts:%s', movie['url'])
+            media_object.parts.append(
+                PartObject(key='http://fs.to' + movie['url']) 
             )
-        ]
     else:
         media_object.parts=[
             PartObject(
