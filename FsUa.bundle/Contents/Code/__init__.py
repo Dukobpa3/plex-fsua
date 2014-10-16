@@ -1,4 +1,5 @@
 from descriptors import *
+import sys
 
 ICON = 'icon-default.png'
 BASE_SITE_URL = "http://fs.to"  # "http://fs.ua"
@@ -225,8 +226,18 @@ def Search(query):
             title_elem = result.xpath('string(a/@title)')
 
             Log.Debug(title_elem)
-            title, the_rest = title_elem.split('/')
-            title = title.strip()
+            if title_elem.find('/') >= 0:
+                telm_split = title_elem.split('/')
+                title = telm_split[0]
+                the_rest = ''
+                for num in range(1, len(telm_split)):
+                    the_rest = the_rest + '/' + telm_split[num] 
+                title = title.strip()
+            else:
+                begin_id = title_elem.find('(')
+                title = title_elem[1:begin_id]
+                the_rest = title_elem[begin_id:len(title_elem)]
+                title = title.strip()
 
             split_char = the_rest.rfind(' ')
             original_title = the_rest[:split_char].strip()
@@ -243,33 +254,48 @@ def Search(query):
 
             @task
             def ParseMovie(link=link, descr=descr, num=num):
-                movie_page = HTML.ElementFromURL(link)
+                try:
+                    movie_page = HTML.ElementFromURL(link)
+                    Log('url:%s', link)
 
-                additional_info = {}
-                additional_info['summary'] = movie_page.cssselect('.item-info > p')[0].text_content()
-                additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
+                    additional_info = {}
+                    if len(movie_page.cssselect('.b-tab-item__description p')) <= 0:
+                        results[num] = None
+                        return
+                    
+                    additional_info['summary'] = movie_page.cssselect('.b-tab-item__description p')[0].text_content()
+                    Log('summary:%s', additional_info['summary'])
+                    additional_info['poster'] = movie_page.cssselect('.poster-main img')[0].xpath('string(@src)')
 
-                info_table = movie_page.cssselect('.item-info tr')
-                for row in info_table:
-                    caption_elem, values_elem = row.xpath('td')
-                    caption = caption_elem.xpath('string(text())').strip()
-                    values = values_elem.xpath('a/text()')
-                    if caption == 'Жанр:':
-                        additional_info['genres'] = values
-                    elif caption == 'Страна:':
-                        additional_info['countries'] = values
-                    elif caption == 'Режиссёр:':
-                        additional_info['directors'] = values
+                    info_table = movie_page.cssselect('.item-info tr')
+                    for row in info_table:
+                        caption_elem, values_elem = row.xpath('td')
+                        caption = caption_elem.xpath('string(text())').strip()
+                        values = values_elem.xpath('span/a/span/text()')
+                        if caption == 'Жанр:':
+                            additional_info['genres'] = values
+                        elif caption == 'Страна:':
+                            additional_info['countries'] = values_elem.xpath('a/span/text()')
+                        elif caption == 'Режиссёр:':
+                            additional_info['directors'] = values
 
-                additional_info['media_url'] = BASE_SITE_URL + movie_page.cssselect('.b-view-material')[0].xpath('string(a/@href)')
+                    additional_info['media_url'] = BASE_SITE_URL + movie_page.cssselect('.b-view-material')[0].xpath('string(a/@href)')
 
-                descr.update(additional_info)
-                results[num] = MovieDescriptor(**descr)
+                    descr.update(additional_info)
+                    results[num] = MovieDescriptor(**descr)
+                except:
+                    e = sys.exc_info()[0]
+                    Log('Error in ParseMovie url:%s error:%s', link, e)
+                    results[num] = None
+                    return
 
     keys = results.keys()
     keys.sort()
 
-    results_menu_objects = [results[key].ToMovieObject() for key in keys]
+    results_menu_objects = [];
+    for key in keys:
+        if not results[key] is None:
+            results_menu_objects.append(results[key].ToMovieObject())
     results_menu = ObjectContainer(objects=results_menu_objects)
 
     return results_menu

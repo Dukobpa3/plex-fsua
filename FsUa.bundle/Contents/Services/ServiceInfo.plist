@@ -8,9 +8,8 @@
 		<dict>
 			<key>URLPatterns</key>
 			<array>
-				<string>http://fs\.to/video/[A-Za-z0-9_]+/view/[A-Za-z0-9_]+</string>
-				<string>http://fs\.to/view/[A-Za-z0-9_]+\?play&amp;file=\d+</string>
-				<string>http://fs\.to/view/[A-Za-z0-9_]+</string>
+				<string>http://fs\.to/video/\w+/view/\w+</string>
+				<string>http://fs\.to/video/\w+/view/\w+\?play&amp;file=\d+</string>
 			</array>
 			<key>TestURLs</key>
 			<array>
